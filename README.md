@@ -37,6 +37,7 @@ $$
 
 ### 2.2 State Feedback Control
 The control law is defined as:
+
 $$
 u(t) = -Kx(t)
 $$
