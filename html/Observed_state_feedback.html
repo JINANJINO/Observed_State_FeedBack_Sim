@@ -1,0 +1,202 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<META http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      -->
+<title>Observed_state_feedback</title>
+<meta name="generator" content="MATLAB 24.1">
+<link rel="schema.DC" href="http://purl.org/dc/elements/1.1/">
+<meta name="DC.date" content="2025-09-13">
+<meta name="DC.source" content="Observed_state_feedback.m">
+<style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; }
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+span.typesection { color:#A0522D }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style>
+</head>
+<body>
+<div class="content">
+<pre class="codeinput">clc; clear; close <span class="string">all</span>;
+
+<span class="comment">% Plant</span>
+A = [0 1; 0 0];
+B = [0; 1];
+C = [1 0];
+D = 0;
+
+<span class="comment">% Gains (use place for better numerical stability)</span>
+K = place(A, B, [-1 -1]);             <span class="comment">% controller poles at -1 (double)</span>
+L = place(A', C', [-5 -5])';          <span class="comment">% observer poles faster (here at -5)</span>
+
+<span class="comment">% Augmented closed-loop + observer system (states: x(2) and xhat(2) -&gt; 4 states)</span>
+Acl = [A, -B*K;
+       L*C, A - B*K - L*C];
+
+Bcl = [B; zeros(2,1)];                <span class="comment">% single input (can be reference or control input)</span>
+Ccl = [C, zeros(1,2)];
+Dcl = 0;
+
+h = ss(Acl, Bcl, Ccl, Dcl);
+
+t = 0:0.01:8;
+
+<span class="comment">% Example 1: autonomous response (no input) from IC (x1=1, x2=0.5, xhat=0)</span>
+x0 = [1; 0.5; 0; 0];
+u_zero = zeros(size(t));
+[y1, t1, xhist1] = lsim(h, u_zero, t, x0);
+
+<span class="comment">% Example 2: apply a unit step input (just to see forced response) -- optional</span>
+u_step = ones(size(t));
+[y2, t2, xhist2] = lsim(h, u_step, t, x0);
+
+<span class="comment">% Plot autonomous response</span>
+figure;
+subplot(2,1,1)
+plot(t1, xhist1(:,1), <span class="string">'-b'</span>, <span class="string">'LineWidth'</span>, 2); hold <span class="string">on</span>
+plot(t1, xhist1(:,3), <span class="string">'--r'</span>, <span class="string">'LineWidth'</span>, 2);
+axis([0 8 -0.5 1.5])
+xlabel(<span class="string">'Time (sec)'</span>); ylabel(<span class="string">'State x_1 / \hat{x}_1'</span>)
+legend(<span class="string">'x_1 (true)'</span>, <span class="string">'\hat{x}_1 (est)'</span>, <span class="string">'Location'</span>, <span class="string">'Best'</span>)
+grid <span class="string">on</span>
+set(gca, <span class="string">'FontName'</span>, <span class="string">'times'</span>, <span class="string">'FontSize'</span>, 14)
+
+subplot(2,1,2)
+plot(t1, xhist1(:,2), <span class="string">'-b'</span>, <span class="string">'LineWidth'</span>, 2); hold <span class="string">on</span>
+plot(t1, xhist1(:,4), <span class="string">'--r'</span>, <span class="string">'LineWidth'</span>, 2);
+axis([0 8 -1 1])
+xlabel(<span class="string">'Time (sec)'</span>); ylabel(<span class="string">'State x_2 / \hat{x}_2'</span>)
+legend(<span class="string">'x_2 (true)'</span>, <span class="string">'\hat{x}_2 (est)'</span>, <span class="string">'Location'</span>, <span class="string">'Best'</span>)
+grid <span class="string">on</span>
+set(gca, <span class="string">'FontName'</span>, <span class="string">'times'</span>, <span class="string">'FontSize'</span>, 14)
+</pre>
+<pre class="codeoutput error">다음 사용 중 오류가 발생함: place (78번 라인)
+"place" 명령은 rank(B)보다 큰 중복도를 갖는 극점을 배치할 수 없습니다.
+
+오류 발생: Observed_state_feedback (10번 라인)
+K = place(A, B, [-1 -1]);             % controller poles at -1 (double)
+</pre>
+<p class="footer">
+<br>
+<a href="https://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2024a</a>
+<br>
+</p>
+</div>
+<!--
+##### SOURCE BEGIN #####
+clc; clear; close all;
+
+% Plant
+A = [0 1; 0 0];
+B = [0; 1];
+C = [1 0];
+D = 0;
+
+% Gains (use place for better numerical stability)
+K = place(A, B, [-1 -1]);             % controller poles at -1 (double)
+L = place(A', C', [-5 -5])';          % observer poles faster (here at -5)
+
+% Augmented closed-loop + observer system (states: x(2) and xhat(2) -> 4 states)
+Acl = [A, -B*K;
+       L*C, A - B*K - L*C];
+
+Bcl = [B; zeros(2,1)];                % single input (can be reference or control input)
+Ccl = [C, zeros(1,2)];
+Dcl = 0;
+
+h = ss(Acl, Bcl, Ccl, Dcl);
+
+t = 0:0.01:8;
+
+% Example 1: autonomous response (no input) from IC (x1=1, x2=0.5, xhat=0)
+x0 = [1; 0.5; 0; 0];
+u_zero = zeros(size(t));
+[y1, t1, xhist1] = lsim(h, u_zero, t, x0);
+
+% Example 2: apply a unit step input (just to see forced response) REPLACE_WITH_DASH_DASH optional
+u_step = ones(size(t));
+[y2, t2, xhist2] = lsim(h, u_step, t, x0);
+
+% Plot autonomous response
+figure;
+subplot(2,1,1)
+plot(t1, xhist1(:,1), '-b', 'LineWidth', 2); hold on
+plot(t1, xhist1(:,3), 'REPLACE_WITH_DASH_DASHr', 'LineWidth', 2);
+axis([0 8 -0.5 1.5])
+xlabel('Time (sec)'); ylabel('State x_1 / \hat{x}_1')
+legend('x_1 (true)', '\hat{x}_1 (est)', 'Location', 'Best')
+grid on
+set(gca, 'FontName', 'times', 'FontSize', 14)
+
+subplot(2,1,2)
+plot(t1, xhist1(:,2), '-b', 'LineWidth', 2); hold on
+plot(t1, xhist1(:,4), 'REPLACE_WITH_DASH_DASHr', 'LineWidth', 2);
+axis([0 8 -1 1])
+xlabel('Time (sec)'); ylabel('State x_2 / \hat{x}_2')
+legend('x_2 (true)', '\hat{x}_2 (est)', 'Location', 'Best')
+grid on
+set(gca, 'FontName', 'times', 'FontSize', 14)
+
+##### SOURCE END #####
+-->
+</body>
+</html>
